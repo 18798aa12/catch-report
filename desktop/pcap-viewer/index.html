@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catch Report PCAP Viewer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Catch Report</h1>
+      <p>本地 PCAP / PCAPNG 查看器</p>
+    </div>
+    <label class="file-button">
+      打开文件
+      <input id="fileInput" type="file" accept=".pcap,.pcapng,.cap">
+    </label>
+  </header>
+
+  <main>
+    <section class="summary-grid" aria-label="统计">
+      <div class="metric">
+        <span>包数</span>
+        <strong id="packetCount">0</strong>
+      </div>
+      <div class="metric">
+        <span>总字节</span>
+        <strong id="byteCount">0</strong>
+      </div>
+      <div class="metric">
+        <span>格式</span>
+        <strong id="fileFormat">未打开</strong>
+      </div>
+      <div class="metric">
+        <span>链路类型</span>
+        <strong id="linkType">-</strong>
+      </div>
+    </section>
+
+    <section class="toolbar" aria-label="过滤">
+      <input id="searchInput" type="search" placeholder="过滤 IP、端口、协议、DNS">
+      <button id="clearButton" type="button">清空</button>
+    </section>
+
+    <section class="table-wrap" aria-label="数据包列表">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>时间</th>
+            <th>协议</th>
+            <th>源</th>
+            <th>目标</th>
+            <th>长度</th>
+            <th>摘要</th>
+          </tr>
+        </thead>
+        <tbody id="packetRows">
+          <tr>
+            <td colspan="7" class="empty">打开一个 PCAP 或 PCAPNG 文件开始分析</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="detail" aria-label="包详情">
+      <h2>包详情</h2>
+      <pre id="packetDetail">未选择数据包</pre>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -94,6 +94,25 @@
 
    如果目标 App 能配置 HTTP/SOCKS 代理，可以让 App 走代理，代理再走 VPN。这适合自己的测试 App，不适合所有第三方 App。
 
+### 必须挂自己的代理再抓包
+
+可以做，推荐作为第二阶段重点。
+
+非 root 链路应设计为：
+
+```text
+Android App 流量
+  -> Catch Report VpnService
+  -> PCAP 记录和流统计
+  -> 用户态 TCP/UDP 转发
+  -> 自己的 SOCKS5 / HTTP CONNECT 代理
+  -> 代理或 VPN 出口
+```
+
+这样 Android 系统层面仍然只有一个 VPN，也就是 Catch Report 自己的 `VpnService`。上游代理只是 App 内部转发目标，不违反“安卓只能一个活跃 VPN”的限制。
+
+第一版先预留代理配置；第二版实现 SOCKS5/HTTP CONNECT；第三版再处理 UDP/QUIC 的代理能力。
+
 ## 推荐架构
 
 做两个 App，再加一套共享的抓包格式约定。
@@ -120,7 +139,7 @@
 
 ### 安卓端
 
-- 技术：Kotlin + Android `VpnService` + 前台通知 + Jetpack Compose UI。
+- 技术：Kotlin + Android `VpnService` + 前台通知 + 最小原生 Android UI。后续可升级到 Jetpack Compose。
 - 权限路线：全程非 root，不依赖 Magisk、不写系统证书、不修改系统分区。
 - 第一版功能：
   - 点击开始
@@ -153,7 +172,7 @@
 2. 先做电脑端 MVP，因为它能先打开和分析 PCAP。
 3. 再做安卓端 MVP，先实现授权 VPN 抓包和 PCAP 导出。
 4. 打通安卓导出 PCAP，电脑端导入分析。
-5. 后续再加 Pktmon 导入、PCAPNG、mitmproxy 实验室模式、上游代理模式。
+5. 后续再加 Pktmon 导入、PCAPNG、mitmproxy 实验室模式、上游 SOCKS5/HTTP CONNECT 代理模式。
 
 ## 不做的事情
 

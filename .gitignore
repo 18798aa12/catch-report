@@ -15,6 +15,13 @@ local.properties
 *.apk
 *.aab
 
+# Capture outputs
+*.etl
+*.pcap
+*.pcapng
+!samples/**/*.pcap
+!samples/**/*.pcapng
+
 # IDE
 .idea/
 .vscode/

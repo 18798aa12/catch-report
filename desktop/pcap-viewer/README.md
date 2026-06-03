@@ -8,7 +8,8 @@
 - 基础 PCAPNG Enhanced Packet Block。
 - Ethernet 和 raw IP 链路类型。
 - IPv4、IPv6、TCP、UDP、ICMP、DNS 查询摘要。
-- 文件级统计、包列表、hex/ASCII 预览。
+- 文件级统计、包列表、域名/IP/端口/字段值搜索、点击单包后的字段 / Value 和 hex/ASCII 预览。
+- 明文 HTTP 会显示 method、URL、headers、query/form/json 字段；HTTPS 默认只能显示 TLS SNI/ALPN 等未加密握手字段。
 
 限制：
 

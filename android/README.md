@@ -30,17 +30,19 @@ App 流量 -> Catch Report VpnService -> hev-socks5-tunnel -> 127.0.0.1:7890 -> 
 
 ## 内置 Mihomo 推荐流程
 
+应用首页是分步向导，先选择“不挂代理抓包”或“挂代理抓包”。未完成当前步骤时，“下一步”不会放行。
+
 推荐优先使用内置 Mihomo，避免同时打开两个 Android VPN：
 
-1. 打开 Catch Report。
-2. 填写 Clash/Mihomo 订阅链接，点击“下载订阅配置”；也可以点击“导入 Clash/Mihomo 配置”导入本地 YAML。
+1. 打开 Catch Report，选择“挂代理抓包”。
+2. 第 1 步配置上游代理：填写 Clash/Mihomo 订阅链接，点击“下载订阅配置”；也可以点击“导入 Clash/Mihomo 配置”导入本地 YAML。
 3. 点击“使用内置 Mihomo 代理”。
-4. 点击“开始抓包”，同意 Android VPN 授权。
-5. 点击“刷新代理节点”。
-6. 在第一个下拉框选择代理组，常见是“节点选择”。
-7. 在第二个下拉框选择具体节点，点击“应用代理节点”。
-8. 打开目标软件测试。
-9. 回到 Catch Report 点击“停止抓包”。
+4. 第 2 步启动 VPN 抓包：点击“开始抓包”，同意 Android VPN 授权。
+5. 第 3 步选择或确认代理节点：点击“刷新代理节点”，在第一个下拉框选择代理组，第二个下拉框选择节点，再点“应用代理节点”。
+6. 第 4 步产生代理流量：打开目标软件测试。
+7. 第 5 步停止抓包：回到 Catch Report 点击“停止抓包”。
+8. 第 6 步查看结果：在结果页点击“刷新抓包结果”，选择文件后可搜索协议、IP、端口、DNS 域名或字段值。
+9. 搜索结果会分页展示，直接点击“详情 #包号”即可查看字段 / Value、HTTP 明文字段、TLS SNI/ALPN、Payload ASCII 和 HEX。
 
 导入或下载的配置会保存在 App 私有目录，运行前会强制本地监听：
 
@@ -80,7 +82,10 @@ adb reverse tcp:7890 tcp:7890
 
 ## 已验证结果
 
-- `只记录 PCAP`：Pixel6Api36 模拟器生成 `.pcap`，最终 smoke test 解析到 64 个包，元数据一致。
+- `只记录 PCAP`：Pixel6Api36 模拟器生成 `.pcap`，应用内预览解析到 214 个包，元数据一致。
+- `应用内搜索/详情`：搜索 `example.com` 命中 DNS query；点击详情项可展示字段 / Value、IPv4、UDP、DNS、HTTP 明文字段、TLS SNI/ALPN、Payload ASCII 和 HEX。
+- `边抓边看`：只记录 PCAP 模式写包后会 flush，并可在“结果”页打开实时预览刷新最新文件。
+- `抓包文件清理`：界面提供删除选中文件和一键清空历史结果，完整 PCAP 会同步删除对应 `.json` 元数据。
 - `挂自己的代理再抓包`：`127.0.0.1:7891` 经 `adb reverse` 转到 Windows Clash，测试 HTTP 服务命中请求，`.pcap.pending.json` 写入 tun2socks 统计。
 - `内置 Mihomo`：Pixel6Api36 模拟器中官方 x86_64 Mihomo core 启动成功，`hev-socks5-tunnel` 已将 VPN TCP 流量转入 `127.0.0.1:7890`。
 - `节点选择`：已通过 Mihomo external-controller 读取代理组，并支持切换代理组里的具体节点。
@@ -110,4 +115,10 @@ AVD: D:\Dev\Android\avd\Pixel6Api36.avd
 ```powershell
 .\scripts\start-android-emulator.ps1
 .\scripts\install-android-apk.ps1
+```
+
+发布 APK：
+
+```text
+dist\CatchReport-Android-debug.apk
 ```

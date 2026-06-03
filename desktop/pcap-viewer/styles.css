@@ -32,6 +32,19 @@ body {
   background: var(--panel);
 }
 
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.brand img {
+  flex: 0 0 auto;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(13, 27, 42, 0.16);
+}
+
 h1 {
   margin: 0;
   font-size: 22px;

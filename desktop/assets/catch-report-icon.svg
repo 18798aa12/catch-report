@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" role="img" aria-label="Catch Report">
+  <rect width="108" height="108" rx="24" fill="#0d1b2a"/>
+  <path d="M54 12 82 23v25c0 19-12 34-28 42-16-8-28-23-28-42V23Z" fill="#12263a"/>
+  <path d="M54 18 76 27v21c0 15.5-9.5 28-22 35-12.5-7-22-19.5-22-35V27Z" fill="#183b54"/>
+  <path d="M22 56h10l6-14 11 28 9-35 9 26 6-12h13v8h-8l-8 16-10-25-10 36-12-28-3 8H22Z" fill="#2dd4bf"/>
+  <circle cx="54" cy="28" r="7" fill="#e6fffb"/>
+  <circle cx="54" cy="54" r="5" fill="#e6fffb"/>
+  <circle cx="37" cy="78" r="5" fill="#e6fffb"/>
+  <circle cx="71" cy="78" r="5" fill="#e6fffb"/>
+  <path d="M54 59 38 76M54 59l16 17M54 35v14" fill="none" stroke="#e6fffb" stroke-width="3" stroke-linecap="round"/>
+</svg>

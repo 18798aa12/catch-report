@@ -25,6 +25,7 @@ class PcapWriter private constructor(
 
         output.write(header)
         output.write(buffer, 0, length)
+        output.flush()
     }
 
     override fun close() {

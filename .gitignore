@@ -14,6 +14,7 @@ captures/
 local.properties
 *.apk
 *.aab
+!dist/CatchReport-Android-debug.apk
 android/app/src/main/jniLibs/**/libmihomo.so
 android/app/src/main/assets/mihomo-geodata/*
 

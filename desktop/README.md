@@ -3,6 +3,7 @@
 第一阶段提供两个工具：
 
 - `windows-pktmon/`: Windows 自带 `pktmon` 的抓包脚本封装。
+- `windows-launcher/`: Windows EXE 启动器源码，双击后可开始/停止抓包、打开目录和查看器。
 - `pcap-viewer/`: 无依赖 PCAP/PCAPNG 本地查看器。
 - `../scripts/start-windows-mihomo.ps1`: 下载并启动 Windows 版 Mihomo，用 Clash/Mihomo 配置或订阅作为本机代理出口。
 
@@ -11,6 +12,18 @@
 1. 用管理员 PowerShell 启动抓包。
 2. 停止抓包并转换为 PCAPNG。
 3. 用 `pcap-viewer/index.html` 打开 PCAP/PCAPNG 文件分析。
+
+也可以直接运行发布版：
+
+```text
+dist\CatchReport-Windows.exe
+```
+
+这个 EXE 带管理员运行声明，输出目录是：
+
+```text
+%USERPROFILE%\Documents\CatchReport\captures\desktop
+```
 
 如果需要先让电脑走自己的订阅代理：
 

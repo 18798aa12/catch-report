@@ -16,6 +16,7 @@ Packet capture testing workspace for desktop and Android tools.
 - 安卓端第一阶段：Kotlin `VpnService` 非 root 抓包，写出 raw IP PCAP。
 - 代理链第二阶段：`Android App -> Catch Report VpnService -> PCAP 记录 -> 用户态转发 -> 自己的 SOCKS5/HTTP 代理 -> 出口`。
 - Clash 优先路线：Android 只运行 Catch Report VPN，上游转发到 Windows Clash `mixed-port`，常见端口 `7890`。
+- 如果 Clash Android 支持不开 VPN 的本地代理模式，也可以上游转发到 `127.0.0.1:7890`。
 
 注意：安卓第一阶段先完成授权、前台服务、TUN 读取和 PCAP 写入；完整 TCP/UDP 转发和上游代理链是下一阶段。
 

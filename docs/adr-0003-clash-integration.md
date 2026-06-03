@@ -59,6 +59,38 @@ Android App 流量
 
 这样 Android 只运行 Catch Report 一个 VPN；Clash 运行在 Windows 上，作为 LAN 上游代理。
 
+## Android 本机 Clash 作为本地代理
+
+如果必须让目标 App 看到 Android 正在挂 VPN，同时出口又必须走 Clash，可以使用这个链路：
+
+```text
+目标 App
+  -> Catch Report VpnService
+  -> PCAP 记录 / 流统计
+  -> tun2socks 用户态转发
+  -> 127.0.0.1:7890
+  -> Android Clash 本地 mixed-port
+  -> Clash 代理出口
+```
+
+注意，这里 Android 系统仍然只有一个 VPN：Catch Report。Clash Android 不能再开 VPN/TUN，只能启动它的本地 HTTP/SOCKS/mixed-port 代理能力。
+
+如果所用 Clash Android 客户端不支持“不开 VPN，只开本地代理服务”，则改用 Windows Clash 作为上游代理。
+
+## 用户操作流程
+
+后续接入 tun2socks 后，用户操作应是：
+
+1. 打开 Clash Android。
+2. 关闭 Clash 的 VPN/TUN 模式。
+3. 确认 Clash 本地 mixed-port 正在监听，例如 `127.0.0.1:7890`。
+4. 打开 Catch Report。
+5. 选择“挂自己的代理再抓包”。
+6. 点击“使用安卓本机 Clash”，自动填入 `127.0.0.1:7890`。
+7. 点击“开始抓包”，同意 Android VPN 授权。
+8. 打开目标软件。目标软件看到的是 Catch Report VPN，实际出口走 Clash。
+9. 停止抓包后导出 `.pcap` 和 `.pcap.json`。
+
 ## Windows Clash 需要打开 LAN 入站
 
 为了让 Android 连接 Windows Clash，需要在 Windows Clash 客户端中确认：
@@ -83,13 +115,15 @@ bind-address: '*'
 
 - Android UI 的上游代理提示已改为 Clash mixed-port。
 - `UpstreamProxyConfig.DEFAULT_CLASH_MIXED_PORT = 7890`。
+- Android UI 已添加“使用安卓本机 Clash”和“使用 Windows Clash”预设。
 - 代理模式仍然是转发引擎占位，下一步接 tun2socks/用户态栈后才会真正联网转发。
 
 ## 下一步
 
 优先实现：
 
-1. Android 上游转发到 Windows Clash mixed-port。
+1. Android 上游转发到 Android 本机 Clash 或 Windows Clash mixed-port。
 2. 默认 SOCKS5，必要时支持 HTTP CONNECT。
 3. 所有上游 socket 调用 `VpnService.protect()`，避免回环进入 Catch Report VPN。
-4. UI 显示 Windows Clash 连通性测试。
+4. UI 显示 Android 本机 Clash / Windows Clash 连通性测试。
+5. 优先评估 `hev-socks5-tunnel` / `SocksTun` 作为 tun2socks 引擎。

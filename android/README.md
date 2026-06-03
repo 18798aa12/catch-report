@@ -28,6 +28,15 @@ App 流量 -> Catch Report VpnService -> PCAP 记录 -> 用户态转发 -> 自�
 
 ## Clash 推荐设置
 
+如果使用 Android 本机 Clash，推荐让 Catch Report 填：
+
+```text
+代理地址：127.0.0.1
+代理端口：Clash mixed-port，常见 7890
+```
+
+此时 Clash Android 不能开 VPN/TUN，只能作为本地代理服务。Catch Report 是唯一 VPN。
+
 如果 Windows 上运行 Clash，推荐让 Android 端填 Windows 的局域网 IP 和 Clash mixed-port：
 
 ```text

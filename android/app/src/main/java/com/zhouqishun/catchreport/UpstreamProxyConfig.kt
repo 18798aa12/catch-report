@@ -12,6 +12,7 @@ data class UpstreamProxyConfig(
     }
 
     companion object {
+        const val LOCALHOST = "127.0.0.1"
         const val DEFAULT_CLASH_MIXED_PORT = 7890
     }
 }

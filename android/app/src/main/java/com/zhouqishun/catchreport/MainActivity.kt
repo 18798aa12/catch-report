@@ -107,6 +107,26 @@ class MainActivity : Activity() {
 
         applyConfigToForm(pendingConfig)
 
+        val localClashButton = Button(this).apply {
+            text = "使用安卓本机 Clash"
+            setOnClickListener {
+                upstreamProxyRadio.isChecked = true
+                proxyHostInput.setText(UpstreamProxyConfig.LOCALHOST)
+                proxyPortInput.setText(UpstreamProxyConfig.DEFAULT_CLASH_MIXED_PORT.toString())
+                statusText.text = "已填入 127.0.0.1:${UpstreamProxyConfig.DEFAULT_CLASH_MIXED_PORT}"
+            }
+        }
+
+        val windowsClashButton = Button(this).apply {
+            text = "使用 Windows Clash"
+            setOnClickListener {
+                upstreamProxyRadio.isChecked = true
+                proxyHostInput.setText("")
+                proxyPortInput.setText(UpstreamProxyConfig.DEFAULT_CLASH_MIXED_PORT.toString())
+                statusText.text = "请填写 Windows 的局域网 IP"
+            }
+        }
+
         val startButton = Button(this).apply {
             text = "开始抓包"
             setOnClickListener { prepareVpnAndStart() }
@@ -137,6 +157,8 @@ class MainActivity : Activity() {
         root.addView(sectionLabel("上游代理"))
         root.addView(proxyHostInput, fullWidthLayoutParams())
         root.addView(proxyPortInput, fullWidthLayoutParams())
+        root.addView(localClashButton, buttonLayoutParams())
+        root.addView(windowsClashButton, buttonLayoutParams())
         root.addView(startButton, buttonLayoutParams())
         root.addView(stopButton, buttonLayoutParams())
         root.addView(note)

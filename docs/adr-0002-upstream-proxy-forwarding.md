@@ -55,6 +55,7 @@ Android 系统层面只看到一个 VPN，也就是 Catch Report 的 `VpnService
 
 候选方向：
 
+- `hev-socks5-tunnel` / `SocksTun`，优先评估，MIT 许可证，支持 Android、TCP、UDP 和 SOCKS5。
 - Android native tun2socks library。
 - HevSocks5Tunnel 类路线。
 - sing-box/tun2socks 类路线。

@@ -2,6 +2,8 @@
 
 本项目用于自有设备、自有网络、授权测试和协议分析。设计原则：明确授权、前台可见、本地优先、不隐蔽抓取、不自动上传、不采集账号密码、不绕过证书绑定。
 
+硬性要求：安卓端只做非 root 模式。任何需要 root、Magisk、系统证书写入、系统分区改动或内核级抓包的方案，都不作为本项目实现路线。
+
 ## 调研来源
 
 - Android `VpnService`: https://developer.android.com/reference/android/net/VpnService
@@ -22,9 +24,9 @@
 
 ## 总体结论
 
-1. 安卓无 root 抓包主线仍然是 `VpnService`。
+1. 安卓端必须走非 root 的 `VpnService` 路线。
 
-   抓包 App 创建一个本地 VPN/TUN 虚拟网卡，Android 系统把流量导入这个虚拟网卡，App 从文件描述符读取 IP 包，记录为 PCAP/PCAPNG，再负责转发流量。PCAPdroid 这类成熟工具也是这个方向。
+   抓包 App 创建一个本地 VPN/TUN 虚拟网卡，Android 系统把流量导入这个虚拟网卡，App 从文件描述符读取 IP 包，记录为 PCAP/PCAPNG，再负责转发流量。PCAPdroid 这类成熟工具也是这个方向。本项目不要求、不提示、不依赖 root 权限。
 
 2. 安卓抓包必须前台可见并且用户授权。
 
@@ -32,7 +34,7 @@
 
 3. 安卓同时只能有一个活跃 VPN，这是“开着 VPN 抓包”的核心限制。
 
-   如果抓包软件自己通过 `VpnService` 开 VPN，就可以抓；但如果手机已经开了 WireGuard、OpenVPN、Clash、v2rayNG 等另一个 VPN，再启动我们的抓包 VPN，通常会替换或断开原来的 VPN。无 root 情况下不能指望两个 Android VPN App 同时串起来。
+   如果抓包软件自己通过 `VpnService` 开 VPN，就可以抓；但如果手机已经开了 WireGuard、OpenVPN、Clash、v2rayNG 等另一个 VPN，再启动我们的抓包 VPN，通常会替换或断开原来的 VPN。因为本项目坚持非 root，不能依赖系统接口去绕过这个限制。
 
 4. HTTPS 内容解密不适合作为默认功能。
 
@@ -80,9 +82,9 @@
    - 抓物理网卡：看到的是电脑到 VPN 服务器的加密隧道。
    - 抓 VPN 虚拟网卡：有机会看到 VPN 内层流量，取决于 VPN 驱动是否暴露虚拟接口。
 
-3. root 安卓设备抓。
+3. 不采用 root 安卓设备抓包。
 
-   root 后可用系统接口抓包，即使另一个 VPN 正在运行。适合实验室设备，不适合作为默认产品能力。
+   root 后虽然能从系统接口抓包，但这不符合本项目约束。遇到“手机已开其他 VPN”的场景，改用外部网关、电脑 VPN 网卡、代理链或后续的“抓包 + 上游代理/VPN”组合模式。
 
 4. 做成一个“抓包 + 上游代理/VPN”的组合 App。
 
@@ -119,6 +121,7 @@
 ### 安卓端
 
 - 技术：Kotlin + Android `VpnService` + 前台通知 + Jetpack Compose UI。
+- 权限路线：全程非 root，不依赖 Magisk、不写系统证书、不修改系统分区。
 - 第一版功能：
   - 点击开始
   - 系统 VPN 授权

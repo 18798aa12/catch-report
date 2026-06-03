@@ -26,6 +26,17 @@ App 流量 -> Catch Report VpnService -> PCAP 记录 -> 用户态转发 -> 自�
 
 当前代码已经支持在 UI 中选择“挂自己的代理再抓包”，并把代理配置写入服务和 `.pcap.json` 元数据。真正 TCP/UDP 转发引擎还未接入，所以现阶段该模式是工程预留，不代表已经能联网代理转发。
 
+## Clash 推荐设置
+
+如果 Windows 上运行 Clash，推荐让 Android 端填 Windows 的局域网 IP 和 Clash mixed-port：
+
+```text
+代理地址：Windows 局域网 IP，例如 192.168.1.10
+代理端口：Clash mixed-port，常见 7890
+```
+
+Windows Clash 需要开启 Allow LAN / `allow-lan: true`，并允许防火墙局域网入站。
+
 ## 打开方式
 
 用 Android Studio 打开 `android/` 目录。

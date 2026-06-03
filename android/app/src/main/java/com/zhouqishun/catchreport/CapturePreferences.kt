@@ -19,7 +19,7 @@ class CapturePreferences(context: Context) {
                 enabled = mode == CaptureMode.UPSTREAM_PROXY,
                 type = proxyType,
                 host = prefs.getString(KEY_PROXY_HOST, "").orEmpty(),
-                port = prefs.getInt(KEY_PROXY_PORT, 0)
+                port = prefs.getInt(KEY_PROXY_PORT, UpstreamProxyConfig.DEFAULT_CLASH_MIXED_PORT)
             )
         )
     }

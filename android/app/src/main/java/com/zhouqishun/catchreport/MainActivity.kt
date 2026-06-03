@@ -94,13 +94,13 @@ class MainActivity : Activity() {
         modeGroup.addView(upstreamProxyRadio)
 
         proxyHostInput = EditText(this).apply {
-            hint = "代理地址，例如 192.168.1.10"
+            hint = "Clash 所在设备 IP，例如 192.168.1.10"
             inputType = InputType.TYPE_CLASS_TEXT
             setSingleLine(true)
         }
 
         proxyPortInput = EditText(this).apply {
-            hint = "代理端口，例如 1080"
+            hint = "Clash mixed-port，常见 7890"
             inputType = InputType.TYPE_CLASS_NUMBER
             setSingleLine(true)
         }
@@ -216,7 +216,7 @@ class MainActivity : Activity() {
                 enabled = mode == CaptureMode.UPSTREAM_PROXY,
                 type = UpstreamProxyConfig.Type.SOCKS5,
                 host = host,
-                port = port
+                port = if (port > 0) port else UpstreamProxyConfig.DEFAULT_CLASH_MIXED_PORT
             )
         )
     }

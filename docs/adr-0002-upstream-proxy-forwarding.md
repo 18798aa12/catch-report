@@ -68,6 +68,8 @@ Android 系统层面只看到一个 VPN，也就是 Catch Report 的 `VpnService
 - 能处理 UDP 或至少明确 UDP 限制。
 - 能在所有上游 socket 调用 `VpnService.protect`。
 
+用户常用 Clash 时，优先把上游目标设计为 Windows Clash 的 `mixed-port`。这比在 Android 上同时运行 Clash VPN 和 Catch Report VPN 更符合非 root 限制。
+
 ## 风险
 
 - 手写 TCP 栈复杂度高，容易造成断流、重传错误、性能问题。

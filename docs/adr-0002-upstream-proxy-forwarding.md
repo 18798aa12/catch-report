@@ -4,7 +4,7 @@
 
 ## 状态
 
-已确定接口，转发引擎待接入。
+已接入 SOCKS5 tun2socks 转发引擎，并接入内置 Mihomo 代理核心。
 
 ## 问题
 
@@ -23,7 +23,7 @@ App 流量
   -> Catch Report VpnService
   -> PCAP 记录 / 流统计
   -> 用户态转发引擎
-  -> SOCKS5 或 HTTP CONNECT
+  -> 内置 Mihomo 或外部 SOCKS5/mixed 代理
   -> 用户自己的代理/VPN 出口
 ```
 
@@ -36,40 +36,26 @@ Android 系统层面只看到一个 VPN，也就是 Catch Report 的 `VpnService
 - `CaptureMode`: `CAPTURE_ONLY` / `UPSTREAM_PROXY`。
 - `CaptureConfig`: 从 UI 传到 `CaptureVpnService`。
 - `UpstreamProxyConfig`: 保存 SOCKS5/HTTP CONNECT 代理参数。
-- `PacketForwarder`: 转发引擎接口。
 - `CaptureOnlyForwarder`: 只记录 PCAP。
-- `UpstreamProxyForwarder`: 代理转发占位实现，记录配置和待转发状态。
 - `CaptureMetadataWriter`: 停止抓包时写 `.pcap.json` 元数据。
+- `hev-socks5-tunnel`: 代理模式下接管 TUN fd，转发到 SOCKS5/Clash。
+- `MihomoCore`: 启动 Android 官方 mihomo core，监听 `127.0.0.1:7890`。
+- 订阅下载：UI 可下载 Clash/Mihomo 订阅到 App 私有配置目录。
+- 配置规范化：强制本地 mixed-port，并移除顶层 `tun:`，避免第二个 Android VPN。
+- HEV mapdns：代理模式 DNS 使用 `198.18.0.2`，避免普通 DNS 直连。
+- Android `INTERNET` 权限：native socks socket 可正常创建。
 
 未完成：
 
-- TCP 状态机。
-- UDP/QUIC 转发。
-- SOCKS5 握手和 UDP ASSOCIATE。
 - HTTP CONNECT 转发。
-- 把上游连接用 `VpnService.protect(socket)` 排除在 VPN 外，避免回环。
+- 代理模式下的完整 PCAP 文件；当前 native 引擎独占读取 TUN fd，只写 `.pcap.pending.json` 和统计。
+- UI 连通性测试。
 
 ## 下一步
 
-优先接成熟的 tun2socks/用户态网络栈，而不是手写完整 TCP。
+下一步优先在 HEV TUN 读包位置加 packet tap，让代理模式边转发边写 PCAP。HTTP CONNECT 可作为后续上游类型，覆盖只开放 HTTP 入口的 Clash 配置。
 
-候选方向：
-
-- `hev-socks5-tunnel` / `SocksTun`，优先评估，MIT 许可证，支持 Android、TCP、UDP 和 SOCKS5。
-- Android native tun2socks library。
-- HevSocks5Tunnel 类路线。
-- sing-box/tun2socks 类路线。
-- 自研最小 TCP 栈只作为最后选择。
-
-评估标准：
-
-- 许可证能接受。
-- Android 非 root 可用。
-- 能接 SOCKS5，最好支持 HTTP CONNECT。
-- 能处理 UDP 或至少明确 UDP 限制。
-- 能在所有上游 socket 调用 `VpnService.protect`。
-
-用户常用 Clash 时，优先把上游目标设计为 Windows Clash 的 `mixed-port`。这比在 Android 上同时运行 Clash VPN 和 Catch Report VPN 更符合非 root 限制。
+用户常用 Clash 配置时，优先使用内置 Mihomo 直接加载 Clash/Mihomo YAML 或订阅。外部 Clash 仍作为备选：上游目标填 Clash `mixed-port`，常见 `7890`；如果客户端 mixed 不接 SOCKS5，再改填 `socks-port = 7891`。
 
 ## 风险
 

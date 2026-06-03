@@ -5,10 +5,12 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.VpnService
 import android.os.Build
 import android.os.Environment
 import android.os.ParcelFileDescriptor
+import android.util.Log
 import java.io.File
 import java.io.FileInputStream
 import java.util.concurrent.atomic.AtomicBoolean
@@ -25,6 +27,8 @@ class CaptureVpnService : VpnService() {
     private var captureThread: Thread? = null
     private var pcapWriter: PcapWriter? = null
     private var packetForwarder: PacketForwarder? = null
+    private var tun2SocksEngine: HevTun2SocksEngine? = null
+    private var mihomoCore: MihomoCore? = null
     private var captureFile: File? = null
     private var captureConfig: CaptureConfig = CaptureConfig.default()
     private var startedAtMillis: Long = 0
@@ -44,7 +48,6 @@ class CaptureVpnService : VpnService() {
 
     private fun startCapture(config: CaptureConfig) {
         if (!running.compareAndSet(false, true)) return
-        captureConfig = config
         startedAtMillis = System.currentTimeMillis()
         packetCount.set(0)
         byteCount.set(0)
@@ -54,25 +57,49 @@ class CaptureVpnService : VpnService() {
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification(config))
 
-        captureFile = createCaptureFile()
-        pcapWriter = PcapWriter.open(captureFile ?: return, PcapWriter.LINKTYPE_RAW)
-        packetForwarder = createForwarder(config)
+        val effectiveConfig = try {
+            startEmbeddedProxyIfNeeded(config)
+        } catch (error: Exception) {
+            Log.e(LOG_TAG, "Failed to start embedded proxy", error)
+            stopCapture()
+            return
+        }
+        captureConfig = effectiveConfig
+        startForeground(NOTIFICATION_ID, buildNotification(effectiveConfig))
 
-        vpnInterface = Builder()
+        captureFile = createCaptureFile(effectiveConfig)
+        if (effectiveConfig.mode == CaptureMode.CAPTURE_ONLY) {
+            pcapWriter = PcapWriter.open(captureFile ?: return, PcapWriter.LINKTYPE_RAW)
+            packetForwarder = createForwarder(effectiveConfig)
+        }
+
+        vpnInterface = createVpnBuilder()
             .setSession("Catch Report")
-            .setMtu(1500)
-            .addAddress("10.77.0.2", 32)
+            .setBlocking(false)
+            .setMtu(8500)
+            .addAddress("198.18.0.1", 32)
+            .addAddress("fc00::1", 128)
             .addRoute("0.0.0.0", 0)
             .addRoute("::", 0)
+            .addDnsServer(dnsServerFor(effectiveConfig))
             .establish()
 
         val descriptor = vpnInterface ?: run {
+            Log.w(LOG_TAG, "VPN establish returned null")
             stopCapture()
             return
         }
 
-        captureThread = thread(name = "catch-report-capture", isDaemon = true) {
-            readTunLoop(descriptor, pcapWriter, packetForwarder)
+        if (effectiveConfig.mode == CaptureMode.UPSTREAM_PROXY) {
+            tun2SocksEngine = HevTun2SocksEngine(this, cacheDir, effectiveConfig.proxy).also {
+                it.start(descriptor)
+            }
+            Log.i(LOG_TAG, "Started upstream proxy capture: ${captureFile?.absolutePath}")
+        } else {
+            captureThread = thread(name = "catch-report-capture", isDaemon = true) {
+                readTunLoop(descriptor, pcapWriter, packetForwarder)
+            }
+            Log.i(LOG_TAG, "Started capture-only: ${captureFile?.absolutePath}")
         }
     }
 
@@ -111,6 +138,20 @@ class CaptureVpnService : VpnService() {
             return
         }
 
+        val finalTun2SocksStats = tun2SocksEngine?.stats()
+
+        try {
+            tun2SocksEngine?.close()
+        } catch (_: Exception) {
+        }
+        tun2SocksEngine = null
+
+        try {
+            mihomoCore?.close()
+        } catch (_: Exception) {
+        }
+        mihomoCore = null
+
         try {
             vpnInterface?.close()
         } catch (_: Exception) {
@@ -130,16 +171,22 @@ class CaptureVpnService : VpnService() {
         packetForwarder = null
 
         captureFile?.let { file ->
-            CaptureMetadataWriter.write(
-                captureFile = file,
-                config = captureConfig,
-                startedAtMillis = startedAtMillis,
-                endedAtMillis = System.currentTimeMillis(),
-                packetCount = packetCount.get(),
-                byteCount = byteCount.get(),
-                recordedOnlyCount = recordedOnlyCount.get(),
-                unsupportedForwardCount = unsupportedForwardCount.get()
-            )
+            try {
+                val sidecar = CaptureMetadataWriter.write(
+                    captureFile = file,
+                    config = captureConfig,
+                    startedAtMillis = startedAtMillis,
+                    endedAtMillis = System.currentTimeMillis(),
+                    packetCount = packetCount.get(),
+                    byteCount = byteCount.get(),
+                    recordedOnlyCount = recordedOnlyCount.get(),
+                    unsupportedForwardCount = unsupportedForwardCount.get(),
+                    tun2SocksStats = finalTun2SocksStats
+                )
+                Log.i(LOG_TAG, "Wrote capture metadata: ${sidecar.absolutePath}")
+            } catch (error: Exception) {
+                Log.e(LOG_TAG, "Failed to write capture metadata for ${file.absolutePath}", error)
+            }
         }
         captureFile = null
 
@@ -148,13 +195,14 @@ class CaptureVpnService : VpnService() {
         stopSelf()
     }
 
-    private fun createCaptureFile(): File {
+    private fun createCaptureFile(config: CaptureConfig): File {
         val dir = File(
             getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
             "captures"
         )
         dir.mkdirs()
-        return File(dir, "catch-report-${System.currentTimeMillis()}.pcap")
+        val suffix = if (config.mode == CaptureMode.UPSTREAM_PROXY) ".pcap.pending" else ".pcap"
+        return File(dir, "catch-report-${System.currentTimeMillis()}$suffix")
     }
 
     private fun buildNotification(config: CaptureConfig): Notification {
@@ -181,10 +229,46 @@ class CaptureVpnService : VpnService() {
         }
     }
 
+    private fun startEmbeddedProxyIfNeeded(config: CaptureConfig): CaptureConfig {
+        if (config.mode != CaptureMode.UPSTREAM_PROXY || !config.proxy.embedded) {
+            return config
+        }
+
+        val core = MihomoCore(this)
+        val upstream = core.start()
+        mihomoCore = core
+        return config.copy(proxy = upstream)
+    }
+
+    private fun createVpnBuilder(): Builder {
+        val builder = Builder()
+        val excludedPackages = buildSet {
+            add(packageName)
+            addAll(KNOWN_CLASH_PACKAGES)
+        }
+        excludedPackages.forEach { packageName ->
+            try {
+                builder.addDisallowedApplication(packageName)
+            } catch (_: PackageManager.NameNotFoundException) {
+            }
+        }
+        return builder
+    }
+
+    private fun dnsServerFor(config: CaptureConfig): String {
+        return when (config.mode) {
+            CaptureMode.UPSTREAM_PROXY -> HevTun2SocksEngine.MAPPED_DNS_ADDRESS
+            CaptureMode.CAPTURE_ONLY -> DEFAULT_DNS_SERVER
+        }
+    }
+
     private fun notificationText(config: CaptureConfig): String {
         return when (config.mode) {
             CaptureMode.CAPTURE_ONLY -> getString(R.string.notification_capture_text)
-            CaptureMode.UPSTREAM_PROXY -> "代理链预留：${config.proxy.type} ${config.proxy.host}:${config.proxy.port}"
+            CaptureMode.UPSTREAM_PROXY -> {
+                val prefix = if (config.proxy.embedded) "内置 Mihomo" else config.proxy.type.toString()
+                "转发到代理：$prefix ${config.proxy.host}:${config.proxy.port}"
+            }
         }
     }
 
@@ -203,5 +287,14 @@ class CaptureVpnService : VpnService() {
         const val ACTION_STOP = "com.zhouqishun.catchreport.action.STOP"
         private const val CHANNEL_ID = "capture"
         private const val NOTIFICATION_ID = 100
+        private const val DEFAULT_DNS_SERVER = "1.1.1.1"
+        private const val LOG_TAG = "CatchReport"
+        private val KNOWN_CLASH_PACKAGES = listOf(
+            "com.github.kr328.clash",
+            "com.github.kr328.clash.foss",
+            "com.github.metacubex.clash.meta",
+            "com.metacubex.clash.meta",
+            "com.github.kr328.clash.meta"
+        )
     }
 }

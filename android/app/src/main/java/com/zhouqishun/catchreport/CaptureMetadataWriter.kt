@@ -11,8 +11,9 @@ object CaptureMetadataWriter {
         packetCount: Long,
         byteCount: Long,
         recordedOnlyCount: Long,
-        unsupportedForwardCount: Long
-    ) {
+        unsupportedForwardCount: Long,
+        tun2SocksStats: Tun2SocksStats? = null
+    ): File {
         val sidecar = File(captureFile.parentFile, "${captureFile.name}.json")
         val json = """
             {
@@ -23,16 +24,19 @@ object CaptureMetadataWriter {
               "byteCount": $byteCount,
               "recordedOnlyCount": $recordedOnlyCount,
               "unsupportedForwardCount": $unsupportedForwardCount,
+              "tun2SocksStats": ${tun2SocksStats?.toJson() ?: "null"},
               "mode": "${config.mode}",
               "proxy": {
                 "enabled": ${config.proxy.enabled},
                 "type": "${config.proxy.type}",
                 "host": "${escape(config.proxy.host)}",
-                "port": ${config.proxy.port}
+                "port": ${config.proxy.port},
+                "embedded": ${config.proxy.embedded}
               }
             }
         """.trimIndent()
         sidecar.writeText(json)
+        return sidecar
     }
 
     private fun escape(value: String): String {
@@ -41,5 +45,16 @@ object CaptureMetadataWriter {
             .replace("\"", "\\\"")
             .replace("\n", "\\n")
             .replace("\r", "\\r")
+    }
+
+    private fun Tun2SocksStats.toJson(): String {
+        return """
+            {
+              "txPackets": $txPackets,
+              "txBytes": $txBytes,
+              "rxPackets": $rxPackets,
+              "rxBytes": $rxBytes
+            }
+        """.trimIndent()
     }
 }

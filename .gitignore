@@ -14,6 +14,8 @@ captures/
 local.properties
 *.apk
 *.aab
+android/app/src/main/jniLibs/**/libmihomo.so
+android/app/src/main/assets/mihomo-geodata/*
 
 # Capture outputs
 *.etl

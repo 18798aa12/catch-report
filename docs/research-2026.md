@@ -17,6 +17,9 @@
 - Microsoft Packet Monitor: https://learn.microsoft.com/en-us/windows-server/networking/technologies/pktmon/pktmon
 - WinDivert: https://reqrypt.org/windivert.html
 - mitmproxy 模式和证书: https://docs.mitmproxy.org/stable/concepts/modes/ 和 https://docs.mitmproxy.org/stable/concepts/certificates/
+- MetaCubeX/mihomo release `v1.19.26`（2026-05-31）: https://github.com/MetaCubeX/mihomo/releases/tag/v1.19.26
+- MetaCubeX/ClashMetaForAndroid release `v2.11.29`（2026-05-31）: https://github.com/MetaCubeX/ClashMetaForAndroid/releases/tag/v2.11.29
+- SagerNet/sing-box release `v1.13.12`（2026-05-15）: https://github.com/SagerNet/sing-box/releases/tag/v1.13.12
 - Scapy: https://pypi.org/project/scapy/
 - Rust pcap crate: https://github.com/rust-pcap/pcap
 - PARROT Android 流量采集论文（2025-09-11）: https://arxiv.org/abs/2509.09537
@@ -51,6 +54,10 @@
 7. 文件格式优先 PCAP，后续加 PCAPNG。
 
    PCAP 简单、兼容 Wireshark。PCAPNG 更适合后续保存接口信息、App 包名、进程名、注释、扩展元数据。
+
+8. 代理核心优先内置 Mihomo。
+
+   用户现有使用习惯是 Clash/Mihomo 订阅。近一年 MetaCubeX/mihomo 和 ClashMetaForAndroid 都保持活跃，官方产物覆盖 Android 多 ABI 与 Windows amd64。相比要求用户另开 Android Clash VPN，内置 Mihomo 更符合“非 root + 单 VPN”限制：Catch Report 自己作为唯一 `VpnService`，HEV tun2socks 把流量转入 `127.0.0.1:7890`，再由 Mihomo 使用订阅节点出站。
 
 ## 开着 VPN 怎么抓包
 
@@ -88,7 +95,7 @@
 
 4. 做成一个“抓包 + 上游代理/VPN”的组合 App。
 
-   也就是我们的 App 自己作为唯一 VPN，同时把流量转发到 SOCKS5、HTTP 代理或某种上游隧道。这样不是两个 VPN 同时跑，而是一个 VPN 内部再转发。这个方案可行，但比 MVP 大很多。
+   也就是我们的 App 自己作为唯一 VPN，同时把流量转发到 SOCKS5、HTTP 代理或某种上游隧道。当前执行路线是内置 Mihomo：一个 VPN 内部再转发，代理配置来自用户的 Clash/Mihomo YAML 或订阅。
 
 5. 对支持代理的测试 App，用代理链。
 
@@ -105,13 +112,13 @@ Android App 流量
   -> Catch Report VpnService
   -> PCAP 记录和流统计
   -> 用户态 TCP/UDP 转发
-  -> 自己的 SOCKS5 / HTTP CONNECT 代理
+  -> 内置 Mihomo / 自己的 SOCKS5 代理
   -> 代理或 VPN 出口
 ```
 
 这样 Android 系统层面仍然只有一个 VPN，也就是 Catch Report 自己的 `VpnService`。上游代理只是 App 内部转发目标，不违反“安卓只能一个活跃 VPN”的限制。
 
-第一版先预留代理配置；第二版实现 SOCKS5/HTTP CONNECT；第三版再处理 UDP/QUIC 的代理能力。
+当前已选择 `hev-socks5-tunnel -> Mihomo mixed-port`。下一步重点不是另起 VPN，而是在 native TUN 读包位置加 packet tap，让代理模式也能同时输出完整 PCAP。
 
 ## 推荐架构
 

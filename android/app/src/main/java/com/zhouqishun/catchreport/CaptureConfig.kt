@@ -12,6 +12,7 @@ data class CaptureConfig(
         intent.putExtra(EXTRA_PROXY_TYPE, proxy.type.name)
         intent.putExtra(EXTRA_PROXY_HOST, proxy.host)
         intent.putExtra(EXTRA_PROXY_PORT, proxy.port)
+        intent.putExtra(EXTRA_PROXY_EMBEDDED, proxy.embedded)
     }
 
     companion object {
@@ -20,6 +21,7 @@ data class CaptureConfig(
         private const val EXTRA_PROXY_TYPE = "proxy_type"
         private const val EXTRA_PROXY_HOST = "proxy_host"
         private const val EXTRA_PROXY_PORT = "proxy_port"
+        private const val EXTRA_PROXY_EMBEDDED = "proxy_embedded"
 
         fun default(): CaptureConfig = CaptureConfig()
 
@@ -30,7 +32,8 @@ data class CaptureConfig(
                 enabled = intent.getBooleanExtra(EXTRA_PROXY_ENABLED, false),
                 type = parseProxyType(intent.getStringExtra(EXTRA_PROXY_TYPE)),
                 host = intent.getStringExtra(EXTRA_PROXY_HOST).orEmpty(),
-                port = intent.getIntExtra(EXTRA_PROXY_PORT, 0)
+                port = intent.getIntExtra(EXTRA_PROXY_PORT, 0),
+                embedded = intent.getBooleanExtra(EXTRA_PROXY_EMBEDDED, false)
             )
             return CaptureConfig(mode = mode, proxy = proxy)
         }

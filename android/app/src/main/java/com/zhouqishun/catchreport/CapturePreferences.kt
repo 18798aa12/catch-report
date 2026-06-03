@@ -19,7 +19,8 @@ class CapturePreferences(context: Context) {
                 enabled = mode == CaptureMode.UPSTREAM_PROXY,
                 type = proxyType,
                 host = prefs.getString(KEY_PROXY_HOST, "").orEmpty(),
-                port = prefs.getInt(KEY_PROXY_PORT, UpstreamProxyConfig.DEFAULT_CLASH_MIXED_PORT)
+                port = prefs.getInt(KEY_PROXY_PORT, UpstreamProxyConfig.DEFAULT_CLASH_PROXY_PORT),
+                embedded = prefs.getBoolean(KEY_PROXY_EMBEDDED, false)
             )
         )
     }
@@ -30,6 +31,17 @@ class CapturePreferences(context: Context) {
             .putString(KEY_PROXY_TYPE, config.proxy.type.name)
             .putString(KEY_PROXY_HOST, config.proxy.host)
             .putInt(KEY_PROXY_PORT, config.proxy.port)
+            .putBoolean(KEY_PROXY_EMBEDDED, config.proxy.embedded)
+            .apply()
+    }
+
+    fun loadSubscriptionUrl(): String {
+        return prefs.getString(KEY_SUBSCRIPTION_URL, "").orEmpty()
+    }
+
+    fun saveSubscriptionUrl(url: String) {
+        prefs.edit()
+            .putString(KEY_SUBSCRIPTION_URL, url)
             .apply()
     }
 
@@ -38,5 +50,7 @@ class CapturePreferences(context: Context) {
         private const val KEY_PROXY_TYPE = "proxy_type"
         private const val KEY_PROXY_HOST = "proxy_host"
         private const val KEY_PROXY_PORT = "proxy_port"
+        private const val KEY_PROXY_EMBEDDED = "proxy_embedded"
+        private const val KEY_SUBSCRIPTION_URL = "subscription_url"
     }
 }

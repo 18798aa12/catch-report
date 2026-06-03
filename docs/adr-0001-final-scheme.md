@@ -33,6 +33,8 @@
 
 第二阶段再接 Npcap/libpcap，实现实时包列表、网卡选择、BPF 过滤和更完整协议解析。
 
+Windows 端同时提供 Mihomo 辅助脚本，可在 `D:\Dev\Mihomo\windows` 启动本机代理核心，配合 `pktmon` 抓走代理出口时的网卡流量。
+
 ### 安卓端第一阶段
 
 使用 Kotlin + Android `VpnService`。
@@ -48,9 +50,9 @@
 
 重要限制：
 
-- 第一阶段先实现捕获和 PCAP 写入，不实现完整 TCP/UDP 用户态转发。
-- 启动捕获 VPN 后，普通联网可能会被中断，这是 MVP 的已知限制。
-- 第二阶段实现用户态转发或“抓包 VPN -> 上游代理”的组合模式。
+- `只记录 PCAP` 模式会直接读取 TUN 并写 `.pcap`。
+- `挂自己的代理再抓包` 模式已通过 HEV tun2socks 转发到内置 Mihomo 或外部 SOCKS/mixed 代理。
+- 代理模式下当前写 `.pcap.pending.json` 和统计，完整 PCAP tap 需要加在 native 读包位置。
 
 ### 开着其他 VPN 的处理
 
@@ -79,7 +81,7 @@ Android App 流量
 
 这个方案仍然是非 root，因为 Android 系统只看到一个 VPN：Catch Report。上游代理只是 App 内部转发目标。
 
-第一版只预留配置接口；第二阶段实现 SOCKS5/HTTP CONNECT 转发；第三阶段再考虑 UDP/QUIC 的代理支持。
+当前执行路线已经接入 `hev-socks5-tunnel` 和内置 Mihomo。Android 端可导入 Clash/Mihomo YAML 或下载订阅到 App 私有目录，运行时强制监听 `127.0.0.1:7890`，Android 系统仍然只有 Catch Report 一个 VPN。
 
 ## 不做
 

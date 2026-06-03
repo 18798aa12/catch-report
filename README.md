@@ -28,3 +28,4 @@ Packet capture testing workspace for desktop and Android tools.
 
 - [抓包软件近一年调研笔记（2025-06 至 2026-06）](docs/research-2026.md)
 - [ADR-0001: 最终实现方案](docs/adr-0001-final-scheme.md)
+- [ADR-0002: 上游代理转发路线](docs/adr-0002-upstream-proxy-forwarding.md)

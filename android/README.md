@@ -24,6 +24,8 @@ App 流量 -> Catch Report VpnService -> PCAP 记录 -> 用户态转发 -> 自�
 
 这可以满足“必须开 VPN/代理出口，同时抓包”的需求，并且仍然非 root。
 
+当前代码已经支持在 UI 中选择“挂自己的代理再抓包”，并把代理配置写入服务和 `.pcap.json` 元数据。真正 TCP/UDP 转发引擎还未接入，所以现阶段该模式是工程预留，不代表已经能联网代理转发。
+
 ## 打开方式
 
 用 Android Studio 打开 `android/` 目录。

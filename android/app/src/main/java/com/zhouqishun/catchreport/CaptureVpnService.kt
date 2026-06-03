@@ -19,14 +19,20 @@ class CaptureVpnService : VpnService() {
     private val running = AtomicBoolean(false)
     private val packetCount = AtomicLong(0)
     private val byteCount = AtomicLong(0)
+    private val recordedOnlyCount = AtomicLong(0)
+    private val unsupportedForwardCount = AtomicLong(0)
     private var vpnInterface: ParcelFileDescriptor? = null
     private var captureThread: Thread? = null
     private var pcapWriter: PcapWriter? = null
+    private var packetForwarder: PacketForwarder? = null
+    private var captureFile: File? = null
+    private var captureConfig: CaptureConfig = CaptureConfig.default()
+    private var startedAtMillis: Long = 0
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> stopCapture()
-            ACTION_START, null -> startCapture()
+            ACTION_START, null -> startCapture(CaptureConfig.fromIntent(intent))
         }
         return START_STICKY
     }
@@ -36,14 +42,21 @@ class CaptureVpnService : VpnService() {
         super.onDestroy()
     }
 
-    private fun startCapture() {
+    private fun startCapture(config: CaptureConfig) {
         if (!running.compareAndSet(false, true)) return
+        captureConfig = config
+        startedAtMillis = System.currentTimeMillis()
+        packetCount.set(0)
+        byteCount.set(0)
+        recordedOnlyCount.set(0)
+        unsupportedForwardCount.set(0)
 
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, buildNotification())
+        startForeground(NOTIFICATION_ID, buildNotification(config))
 
-        val captureFile = createCaptureFile()
-        pcapWriter = PcapWriter.open(captureFile, PcapWriter.LINKTYPE_RAW)
+        captureFile = createCaptureFile()
+        pcapWriter = PcapWriter.open(captureFile ?: return, PcapWriter.LINKTYPE_RAW)
+        packetForwarder = createForwarder(config)
 
         vpnInterface = Builder()
             .setSession("Catch Report")
@@ -59,13 +72,14 @@ class CaptureVpnService : VpnService() {
         }
 
         captureThread = thread(name = "catch-report-capture", isDaemon = true) {
-            readTunLoop(descriptor, pcapWriter)
+            readTunLoop(descriptor, pcapWriter, packetForwarder)
         }
     }
 
     private fun readTunLoop(
         descriptor: ParcelFileDescriptor,
-        writer: PcapWriter?
+        writer: PcapWriter?,
+        forwarder: PacketForwarder?
     ) {
         val buffer = ByteArray(65535)
         FileInputStream(descriptor.fileDescriptor).use { input ->
@@ -80,6 +94,12 @@ class CaptureVpnService : VpnService() {
                 packetCount.incrementAndGet()
                 byteCount.addAndGet(read.toLong())
                 writer?.writePacket(buffer, read)
+                when (forwarder?.handlePacket(buffer, read)?.status) {
+                    ForwardingResult.Status.RECORDED_ONLY -> recordedOnlyCount.incrementAndGet()
+                    ForwardingResult.Status.UNSUPPORTED -> unsupportedForwardCount.incrementAndGet()
+                    ForwardingResult.Status.FORWARDED -> Unit
+                    null -> Unit
+                }
             }
         }
     }
@@ -103,6 +123,26 @@ class CaptureVpnService : VpnService() {
         }
         pcapWriter = null
 
+        try {
+            packetForwarder?.close()
+        } catch (_: Exception) {
+        }
+        packetForwarder = null
+
+        captureFile?.let { file ->
+            CaptureMetadataWriter.write(
+                captureFile = file,
+                config = captureConfig,
+                startedAtMillis = startedAtMillis,
+                endedAtMillis = System.currentTimeMillis(),
+                packetCount = packetCount.get(),
+                byteCount = byteCount.get(),
+                recordedOnlyCount = recordedOnlyCount.get(),
+                unsupportedForwardCount = unsupportedForwardCount.get()
+            )
+        }
+        captureFile = null
+
         captureThread = null
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -117,7 +157,7 @@ class CaptureVpnService : VpnService() {
         return File(dir, "catch-report-${System.currentTimeMillis()}.pcap")
     }
 
-    private fun buildNotification(): Notification {
+    private fun buildNotification(config: CaptureConfig): Notification {
         val openIntent = PendingIntent.getActivity(
             this,
             0,
@@ -127,11 +167,25 @@ class CaptureVpnService : VpnService() {
 
         return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.notification_capture_title))
-            .setContentText(getString(R.string.notification_capture_text))
+            .setContentText(notificationText(config))
             .setSmallIcon(android.R.drawable.stat_sys_upload)
             .setContentIntent(openIntent)
             .setOngoing(true)
             .build()
+    }
+
+    private fun createForwarder(config: CaptureConfig): PacketForwarder {
+        return when (config.mode) {
+            CaptureMode.CAPTURE_ONLY -> CaptureOnlyForwarder()
+            CaptureMode.UPSTREAM_PROXY -> UpstreamProxyForwarder(this, config.proxy)
+        }
+    }
+
+    private fun notificationText(config: CaptureConfig): String {
+        return when (config.mode) {
+            CaptureMode.CAPTURE_ONLY -> getString(R.string.notification_capture_text)
+            CaptureMode.UPSTREAM_PROXY -> "代理链预留：${config.proxy.type} ${config.proxy.host}:${config.proxy.port}"
+        }
     }
 
     private fun createNotificationChannel() {

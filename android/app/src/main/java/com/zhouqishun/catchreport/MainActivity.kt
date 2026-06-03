@@ -6,19 +6,34 @@ import android.content.Intent
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
+import android.text.InputType
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.RadioButton
+import android.widget.RadioGroup
+import android.widget.ScrollView
 import android.widget.TextView
 
 class MainActivity : Activity() {
     private lateinit var statusText: TextView
+    private lateinit var captureOnlyRadio: RadioButton
+    private lateinit var upstreamProxyRadio: RadioButton
+    private lateinit var proxyHostInput: EditText
+    private lateinit var proxyPortInput: EditText
+    private lateinit var preferences: CapturePreferences
+    private var pendingConfig: CaptureConfig = CaptureConfig.default()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        preferences = CapturePreferences(this)
+        pendingConfig = preferences.load()
         requestNotificationPermissionIfNeeded()
-        setContentView(buildLayout())
+        setContentView(ScrollView(this).apply {
+            addView(buildLayout())
+        })
     }
 
     @Deprecated("Deprecated in platform API; kept for minimal dependency-free MVP.")
@@ -34,11 +49,11 @@ class MainActivity : Activity() {
     private fun buildLayout(): LinearLayout {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
+            gravity = Gravity.CENTER_HORIZONTAL or Gravity.TOP
             setPadding(36, 48, 36, 36)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
+                ViewGroup.LayoutParams.WRAP_CONTENT
             )
         }
 
@@ -62,6 +77,36 @@ class MainActivity : Activity() {
             setPadding(0, 0, 0, 28)
         }
 
+        val modeLabel = sectionLabel("模式")
+        val modeGroup = RadioGroup(this).apply {
+            orientation = RadioGroup.VERTICAL
+        }
+
+        captureOnlyRadio = RadioButton(this).apply {
+            text = "只记录 PCAP"
+            id = 100
+        }
+        upstreamProxyRadio = RadioButton(this).apply {
+            text = "挂自己的代理再抓包"
+            id = 101
+        }
+        modeGroup.addView(captureOnlyRadio)
+        modeGroup.addView(upstreamProxyRadio)
+
+        proxyHostInput = EditText(this).apply {
+            hint = "代理地址，例如 192.168.1.10"
+            inputType = InputType.TYPE_CLASS_TEXT
+            setSingleLine(true)
+        }
+
+        proxyPortInput = EditText(this).apply {
+            hint = "代理端口，例如 1080"
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setSingleLine(true)
+        }
+
+        applyConfigToForm(pendingConfig)
+
         val startButton = Button(this).apply {
             text = "开始抓包"
             setOnClickListener { prepareVpnAndStart() }
@@ -78,7 +123,7 @@ class MainActivity : Activity() {
         }
 
         val note = TextView(this).apply {
-            text = "第一阶段写出 PCAP；完整转发和上游代理链将在下一阶段接入。"
+            text = "代理链模式已经保存配置并写入元数据；完整 TCP/UDP 转发引擎下一阶段接入。"
             textSize = 13f
             gravity = Gravity.CENTER
             setPadding(0, 28, 0, 0)
@@ -87,6 +132,11 @@ class MainActivity : Activity() {
         root.addView(title)
         root.addView(subtitle)
         root.addView(statusText)
+        root.addView(modeLabel)
+        root.addView(modeGroup, fullWidthLayoutParams())
+        root.addView(sectionLabel("上游代理"))
+        root.addView(proxyHostInput, fullWidthLayoutParams())
+        root.addView(proxyPortInput, fullWidthLayoutParams())
         root.addView(startButton, buttonLayoutParams())
         root.addView(stopButton, buttonLayoutParams())
         root.addView(note)
@@ -102,7 +152,28 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun fullWidthLayoutParams(): LinearLayout.LayoutParams {
+        return LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply {
+            bottomMargin = 12
+        }
+    }
+
+    private fun sectionLabel(textValue: String): TextView {
+        return TextView(this).apply {
+            text = textValue
+            textSize = 14f
+            setPadding(0, 16, 0, 6)
+        }
+    }
+
     private fun prepareVpnAndStart() {
+        val config = readConfigFromForm() ?: return
+        pendingConfig = config
+        preferences.save(config)
+
         val prepareIntent = VpnService.prepare(this)
         if (prepareIntent != null) {
             statusText.text = "等待 VPN 授权"
@@ -115,6 +186,7 @@ class MainActivity : Activity() {
     private fun startCaptureService() {
         val intent = Intent(this, CaptureVpnService::class.java).apply {
             action = CaptureVpnService.ACTION_START
+            pendingConfig.putInto(this)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(intent)
@@ -122,6 +194,38 @@ class MainActivity : Activity() {
             startService(intent)
         }
         statusText.text = "抓包服务启动中"
+    }
+
+    private fun readConfigFromForm(): CaptureConfig? {
+        val mode = if (upstreamProxyRadio.isChecked) {
+            CaptureMode.UPSTREAM_PROXY
+        } else {
+            CaptureMode.CAPTURE_ONLY
+        }
+        val host = proxyHostInput.text.toString().trim()
+        val port = proxyPortInput.text.toString().toIntOrNull() ?: 0
+
+        if (mode == CaptureMode.UPSTREAM_PROXY && (host.isBlank() || port !in 1..65535)) {
+            statusText.text = "请填写有效的代理地址和端口"
+            return null
+        }
+
+        return CaptureConfig(
+            mode = mode,
+            proxy = UpstreamProxyConfig(
+                enabled = mode == CaptureMode.UPSTREAM_PROXY,
+                type = UpstreamProxyConfig.Type.SOCKS5,
+                host = host,
+                port = port
+            )
+        )
+    }
+
+    private fun applyConfigToForm(config: CaptureConfig) {
+        captureOnlyRadio.isChecked = config.mode == CaptureMode.CAPTURE_ONLY
+        upstreamProxyRadio.isChecked = config.mode == CaptureMode.UPSTREAM_PROXY
+        proxyHostInput.setText(config.proxy.host)
+        proxyPortInput.setText(if (config.proxy.port > 0) config.proxy.port.toString() else "")
     }
 
     private fun requestNotificationPermissionIfNeeded() {

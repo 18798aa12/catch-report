@@ -1,0 +1,20 @@
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Android / Gradle
+.gradle/
+build/
+captures/
+local.properties
+*.apk
+*.aab
+
+# IDE
+.idea/
+.vscode/

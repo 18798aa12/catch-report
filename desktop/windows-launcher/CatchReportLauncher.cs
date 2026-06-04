@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Text;
 using System.Windows.Forms;
 
 namespace CatchReportLauncher
@@ -35,6 +36,7 @@ namespace CatchReportLauncher
             Height = 560;
             MinimumSize = new Size(680, 500);
             StartPosition = FormStartPosition.CenterScreen;
+            Font = new Font("Microsoft YaHei UI", 9F);
 
             captureDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
@@ -124,7 +126,7 @@ namespace CatchReportLauncher
             logBox.Multiline = true;
             logBox.ReadOnly = true;
             logBox.ScrollBars = ScrollBars.Vertical;
-            logBox.Font = new Font("Consolas", 10);
+            logBox.Font = new Font("Microsoft YaHei UI", 10);
             root.Controls.Add(logBox, 0, 5);
 
             Directory.CreateDirectory(captureDir);
@@ -251,6 +253,8 @@ namespace CatchReportLauncher
             info.UseShellExecute = false;
             info.RedirectStandardOutput = true;
             info.RedirectStandardError = true;
+            info.StandardOutputEncoding = Encoding.UTF8;
+            info.StandardErrorEncoding = Encoding.UTF8;
             info.CreateNoWindow = true;
             using (var process = Process.Start(info))
             {
@@ -283,5 +287,6 @@ namespace CatchReportLauncher
         {
             logBox.AppendText("[" + DateTime.Now.ToString("HH:mm:ss") + "] " + text + Environment.NewLine);
         }
+
     }
 }

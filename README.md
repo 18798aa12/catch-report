@@ -12,7 +12,7 @@ Packet capture testing workspace for desktop and Android tools.
 
 ## 已确定方案
 
-- 电脑端第一阶段：Windows `pktmon` 抓包脚本 + 本地 PCAP/PCAPNG 查看器；可用 `scripts/start-windows-mihomo.ps1` 启动本机 Mihomo 代理出口。
+- 电脑端第一阶段：Windows `pktmon` 抓包 EXE + 内置 PCAP/PCAPNG 预览器；可用 `scripts/start-windows-mihomo.ps1` 启动本机 Mihomo 代理出口。
 - 安卓端第一阶段：Kotlin `VpnService` 非 root 抓包，`只记录 PCAP` 模式写出 raw IP PCAP。
 - 发布产物：`dist/CatchReport-Android-debug.apk` 和 `dist/CatchReport-Windows.exe`。
 - 代理链主线：`Android App -> Catch Report VpnService -> hev-socks5-tunnel -> 127.0.0.1:7890 -> 内置 Mihomo -> 订阅节点/出口`。
@@ -22,6 +22,7 @@ Packet capture testing workspace for desktop and Android tools.
 - Android 端使用分步向导：先选“不挂代理抓包”或“挂代理抓包”，未完成上一步时不能继续下一步。
 - Android 端内置抓包结果预览，结果页支持按协议、IP、端口、DNS 域名和字段值搜索、分页展示、点击单包查看字段 / Value、IP/TCP/UDP/DNS、HTTP 明文字段、TLS SNI/ALPN 和原始 HEX，并可在只记录 PCAP 模式边抓边刷新预览。
 - Android 端支持删除选中的抓包文件，或一键清空历史抓包结果。
+- Windows 端已同步同类工作流：分步引导、不挂代理/挂代理流程、Clash 7890/7891 检测、pktmon 启停转换、结果页搜索、分页、点击每个包展开字段 / Value、RAW HEX/ASCII、删除选中和一键清空。
 
 注意：代理模式已经接入 `hev-socks5-tunnel` 转发到 SOCKS5/Clash；该模式下 TUN fd 由 native 引擎独占读取，当前写 `.pcap.pending.json` 元数据和转发统计。完整“边转发边写 PCAP”需要下一步在 native 读包位置加 packet tap。
 
@@ -32,7 +33,7 @@ Packet capture testing workspace for desktop and Android tools.
 - Android `挂自己的代理再抓包`：已验证 `Catch Report VPN -> hev-socks5-tunnel -> 127.0.0.1:7891 -> Clash -> HTTP 测试服务`，服务器命中测试请求。
 - Android `内置 Mihomo`：已验证内置官方 Mihomo core 启动并监听 `127.0.0.1:7890`，VPN 流量可经 HEV 转入 core。
 - Windows `pktmon`：已用管理员模式生成 ETL 和 PCAPNG，转换结果包含 12620 个格式化包。
-- Windows `EXE`：`dist/CatchReport-Windows.exe` 已生成，内置管理员启动 manifest，可启动/停止 pktmon、打开抓包目录和本地查看器。
+- Windows `EXE`：`dist/CatchReport-Windows.exe` 已生成，内置管理员启动 manifest，可启动/停止 pktmon、转换 PCAPNG，并在 EXE 内直接搜索、分页和展开查看抓包详情。
 
 ## 目录
 

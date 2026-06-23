@@ -150,7 +150,7 @@ adb reverse tcp:7890 tcp:7890
 2026-06-03 在 Pixel6Api36 模拟器验证：
 
 - `只记录 PCAP`：生成 `.pcap`，最终 smoke test 解析到 64 个包。
-- `挂自己的代理再抓包`：已验证 `Catch Report VPN -> hev-socks5-tunnel -> 127.0.0.1:7891 -> adb reverse -> Windows Clash -> 192.168.1.6:18080`，测试 HTTP 服务命中请求。
+- `挂自己的代理再抓包`：已验证 `Catch Report VPN -> hev-socks5-tunnel -> 127.0.0.1:7891 -> adb reverse -> Windows Clash -> <局域网IP>:18080`，测试 HTTP 服务命中请求。
 - 内置 Mihomo 官方 x86_64 core 已在模拟器启动，并通过 HEV 转入 `127.0.0.1:7890`。
 - Windows Clash mixed `7890` 作为外部代理备选继续保留；如果客户端 mixed 入口异常，保留 socks `7891` 作为手动备选。
 
